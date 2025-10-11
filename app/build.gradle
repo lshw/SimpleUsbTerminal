@@ -15,7 +15,7 @@ android {
         minSdkVersion 19
         vectorDrawables.useSupportLibrary true
 
-        applicationId "usb_terminal.wf163.com"
+        applicationId "cn.org.bjlx.usb_terminal"
         versionCode 1
         versionName "1.1"
     }
@@ -49,9 +49,7 @@ android {
 }
 
 dependencies {
-    implementation 'com.github.mik3y:usb-serial-for-android:3.8.0' // maven jitpack
-    //implementation('com.github.mik3y:usb-serial-for-android:3.8.0beta') { changing = true } // maven local
-
+    implementation 'com.github.mik3y:usb-serial-for-android:3.10.0' // maven jitpack
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.12.0'
 }
