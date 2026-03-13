@@ -78,6 +78,16 @@ public class SerialService extends Service implements SerialListener {
         return binder;
     }
 
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && Constants.INTENT_ACTION_DISCONNECT.equals(intent.getAction())) {
+            disconnect();
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        return START_STICKY;
+    }
+
     /**
      * Api
      */
@@ -159,14 +169,14 @@ public class SerialService extends Service implements SerialListener {
 
     private void createNotification() {
         Intent disconnectIntent = new Intent()
-                .setPackage(getPackageName())
+                .setClass(this, SerialService.class)
                 .setAction(Constants.INTENT_ACTION_DISCONNECT);
         Intent restartIntent = new Intent()
                 .setClassName(this, Constants.INTENT_CLASS_MAIN_ACTIVITY)
                 .setAction(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_LAUNCHER);
         int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0;
-        PendingIntent disconnectPendingIntent = PendingIntent.getBroadcast(this, 1, disconnectIntent, flags);
+        PendingIntent disconnectPendingIntent = PendingIntent.getService(this, 1, disconnectIntent, flags);
         PendingIntent restartPendingIntent = PendingIntent.getActivity(this, 1, restartIntent,  flags);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification)
