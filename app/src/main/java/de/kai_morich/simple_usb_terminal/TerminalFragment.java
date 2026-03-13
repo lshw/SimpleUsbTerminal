@@ -21,6 +21,7 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
+import android.text.TextWatcher;
 import android.text.method.ScrollingMovementMethod;
 import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
@@ -65,9 +66,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private TextView sendText;
     private ImageButton sendBtn;
     private TextUtil.HexWatcher hexWatcher;
+    private TextWatcher characterModeWatcher;
 
     private Connected connected = Connected.False;
     private boolean initialStart = true;
+    private boolean characterMode = false;
     private boolean hexEnabled = false;
     private enum SendButtonState {Idle, Busy, Disabled};
 
@@ -189,10 +192,35 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         hexWatcher = new TextUtil.HexWatcher(sendText);
         hexWatcher.enable(hexEnabled);
         sendText.addTextChangedListener(hexWatcher);
-        sendText.setHint(hexEnabled ? "HEX mode" : "");
+        characterModeWatcher = new TextWatcher() {
+            private boolean selfChange;
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (selfChange || !characterMode || s.length() == 0) {
+                    return;
+                }
+                if (!hexEnabled && connected == Connected.True) {
+                    send(s.toString(), false);
+                    selfChange = true;
+                    s.clear();
+                    selfChange = false;
+                }
+            }
+        };
+        sendText.addTextChangedListener(characterModeWatcher);
+        updateInputModeUi();
 
         View sendBtn = view.findViewById(R.id.send_btn);
-        sendBtn.setOnClickListener(v -> send(sendText.getText().toString()));
+        sendBtn.setOnClickListener(v -> send(sendText.getText().toString(), !characterMode));
         controlLines.onCreateView(view);
         return view;
     }
@@ -203,6 +231,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     }
 
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.characterMode).setChecked(characterMode);
         menu.findItem(R.id.hex).setChecked(hexEnabled);
         controlLines.onPrepareOptionsMenu(menu);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -218,6 +247,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         int id = item.getItemId();
         if (id == R.id.clear) {
             receiveText.setText("");
+            return true;
+        } else if (id == R.id.characterMode) {
+            characterMode = !characterMode;
+            item.setChecked(characterMode);
+            updateInputModeUi();
             return true;
         } else if (id == R.id.newline) {
             String[] newlineNames = getResources().getStringArray(R.array.newline_names);
@@ -235,7 +269,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             hexEnabled = !hexEnabled;
             sendText.setText("");
             hexWatcher.enable(hexEnabled);
-            sendText.setHint(hexEnabled ? "HEX mode" : "");
+            updateInputModeUi();
             item.setChecked(hexEnabled);
             return true;
         } else if (id == R.id.controlLines) {
@@ -350,6 +384,10 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     }
 
     private void send(String str) {
+        send(str, true);
+    }
+
+    private void send(String str, boolean appendNewline) {
         if(connected != Connected.True) {
             Toast.makeText(getActivity(), "not connected", Toast.LENGTH_SHORT).show();
             return;
@@ -359,12 +397,14 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         if(hexEnabled) {
             StringBuilder sb = new StringBuilder();
             TextUtil.toHexString(sb, TextUtil.fromHexString(str));
-            TextUtil.toHexString(sb, newline.getBytes());
+            if (appendNewline) {
+                TextUtil.toHexString(sb, newline.getBytes());
+            }
             msg = sb.toString();
             data = TextUtil.fromHexString(msg);
         } else {
             msg = str;
-            data = (str + newline).getBytes();
+            data = appendNewline ? (str + newline).getBytes() : str.getBytes();
         }
         try {
             SpannableStringBuilder spn = new SpannableStringBuilder(msg + '\n');
@@ -441,6 +481,19 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         sendBtn.setEnabled(state == SendButtonState.Idle);
         sendBtn.setImageAlpha(state == SendButtonState.Idle ? 255 : 64);
         sendBtn.setImageResource(state == SendButtonState.Disabled ? R.drawable.ic_block_white_24dp : R.drawable.ic_send_white_24dp);
+    }
+
+    private void updateInputModeUi() {
+        if (sendText == null || sendBtn == null) {
+            return;
+        }
+        if (hexEnabled) {
+            sendText.setHint("HEX mode");
+        } else if (characterMode) {
+            sendText.setHint("Character mode");
+        } else {
+            sendText.setHint("");
+        }
     }
 
     /*
