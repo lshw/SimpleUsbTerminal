@@ -2,6 +2,12 @@ plugins {
     id 'com.android.application'
 }
 
+def signingProps = new Properties()
+def signingPropsFile = rootProject.file("signing.properties")
+if (signingPropsFile.exists()) {
+    signingPropsFile.withInputStream { signingProps.load(it) }
+}
+
 android {
     compileSdkVersion 34
     defaultConfig {
@@ -9,18 +15,34 @@ android {
         minSdkVersion 19
         vectorDrawables.useSupportLibrary true
 
-        applicationId "de.kai_morich.simple_usb_terminal"
+        applicationId "usb_terminal.wf163.com"
         versionCode 1
-        versionName "1.0"
+        versionName "1.1"
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    buildFeatures {
+        buildConfig = true
+    }
+    signingConfigs {
+        if (signingPropsFile.exists()) {
+            release {
+                storeFile file(signingProps["storeFile"])
+                storePassword signingProps["storePassword"]
+                keyAlias signingProps["keyAlias"]
+                keyPassword signingProps["keyPassword"]
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (signingConfigs.findByName("release") != null) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     namespace 'de.kai_morich.simple_usb_terminal'

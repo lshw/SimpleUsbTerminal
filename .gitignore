@@ -2,5 +2,11 @@
 /.gradle/
 /.idea/
 /local.properties
+/signing.properties
+/my-release-key.jks
+/app/my-release-key.jks
+/app-release-signed.apk
+/app-release-signed.apk.idsig
+/app-release-unsigned.apk
 /app/build/
 /build/
