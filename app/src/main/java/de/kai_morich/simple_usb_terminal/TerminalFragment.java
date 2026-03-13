@@ -292,7 +292,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             status("connection failed: no driver for device");
             return;
         }
-        if(driver.getPorts().size() < portNum) {
+        if(driver.getPorts().size() <= portNum) {
             status("connection failed: not enough ports at device");
             return;
         }
