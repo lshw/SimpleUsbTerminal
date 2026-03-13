@@ -83,6 +83,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     private boolean pendingNewline = false;
     private String newline = TextUtil.newline_crlf;
+    private TextUtil.AnsiRenderer ansiRenderer;
+    private int pendingCursorColumn = -1;
 
     public TerminalFragment() {
         mainLooper = new Handler(Looper.getMainLooper());
@@ -188,8 +190,20 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_terminal, container, false);
         receiveText = view.findViewById(R.id.receive_text);                          // TextView performance decreases with number of spans
-        receiveText.setTextColor(getResources().getColor(R.color.colorRecieveText)); // set as default color to reduce number of spans
+        int receiveColor = getResources().getColor(R.color.colorRecieveText);
+        receiveText.setTextColor(receiveColor); // set as default color to reduce number of spans
         receiveText.setMovementMethod(ScrollingMovementMethod.getInstance());
+        ansiRenderer = new TextUtil.AnsiRenderer(receiveColor, new TextUtil.AnsiRenderer.ControlHandler() {
+            @Override
+            public void onEraseInLine(int mode) {
+                pendingCursorColumn = mode == 0 ? pendingCursorColumn : 0;
+            }
+
+            @Override
+            public void onCursorHorizontalAbsolute(int column) {
+                pendingCursorColumn = Math.max(0, column - 1);
+            }
+        });
 
         sendPanel = view.findViewById(R.id.send_panel);
         sendText = view.findViewById(R.id.send_text);
@@ -253,6 +267,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         int id = item.getItemId();
         if (id == R.id.clear) {
             receiveText.setText("");
+            pendingNewline = false;
+            pendingCursorColumn = -1;
+            if (ansiRenderer != null) {
+                ansiRenderer.reset();
+            }
             return true;
         } else if (id == R.id.characterMode) {
             characterMode = !characterMode;
@@ -476,10 +495,71 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                     }
                     pendingNewline = msg.charAt(msg.length() - 1) == '\r';
                 }
-                spn.append(TextUtil.toCaretString(msg, newline.length() != 0));
+                if (ansiRenderer != null) {
+                    appendAnsiText(spn, msg);
+                } else {
+                    spn.append(TextUtil.toCaretString(msg, newline.length() != 0));
+                }
             }
         }
         receiveText.append(spn);
+    }
+
+    private void appendAnsiText(SpannableStringBuilder target, String msg) {
+        Editable existing = receiveText.getEditableText();
+        for (int i = 0; i < msg.length(); i++) {
+            applyPendingCursorCommand(target, existing);
+            char c = msg.charAt(i);
+            if (c == '\r') {
+                deleteToLineStart(target, existing);
+                continue;
+            }
+            if (c == '\b') {
+                if (target.length() > 0) {
+                    target.delete(target.length() - 1, target.length());
+                } else if (existing != null && existing.length() > 0) {
+                    existing.delete(existing.length() - 1, existing.length());
+                }
+                continue;
+            }
+            ansiRenderer.appendTo(target, String.valueOf(c), newline.length() != 0);
+        }
+        applyPendingCursorCommand(target, existing);
+    }
+
+    private void applyPendingCursorCommand(SpannableStringBuilder target, Editable existing) {
+        if (pendingCursorColumn < 0) {
+            return;
+        }
+        deleteToLineStart(target, existing);
+        for (int i = 0; i < pendingCursorColumn; i++) {
+            ansiRenderer.appendTo(target, " ", newline.length() != 0);
+        }
+        pendingCursorColumn = -1;
+    }
+
+    private void deleteToLineStart(SpannableStringBuilder target, Editable existing) {
+        int targetLineStart = findLineStart(target);
+        if (targetLineStart < target.length()) {
+            target.delete(targetLineStart, target.length());
+            return;
+        }
+        if (existing == null || existing.length() == 0) {
+            return;
+        }
+        int existingLineStart = findLineStart(existing);
+        if (existingLineStart < existing.length()) {
+            existing.delete(existingLineStart, existing.length());
+        }
+    }
+
+    private int findLineStart(CharSequence text) {
+        for (int i = text.length() - 1; i >= 0; i--) {
+            if (text.charAt(i) == '\n') {
+                return i + 1;
+            }
+        }
+        return 0;
     }
 
     void status(String str) {

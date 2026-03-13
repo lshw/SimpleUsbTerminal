@@ -6,6 +6,9 @@ import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.text.style.BackgroundColorSpan;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
+import android.graphics.Typeface;
 import android.widget.TextView;
 
 import androidx.annotation.ColorInt;
@@ -96,6 +99,204 @@ final class TextUtil {
                 sb.append(s.charAt(pos));
             }
         return sb;
+    }
+
+    static class AnsiRenderer {
+
+        interface ControlHandler {
+            void onEraseInLine(int mode);
+            void onCursorHorizontalAbsolute(int column);
+        }
+
+        private static final int ESC = 27;
+        private static final int[] ANSI_COLORS = {
+                0xff000000, 0xffcd3131, 0xff0dbc79, 0xffe5e510,
+                0xff2472c8, 0xffbc3fbc, 0xff11a8cd, 0xffe5e5e5
+        };
+        private static final int[] ANSI_BRIGHT_COLORS = {
+                0xff666666, 0xffff6666, 0xff23d18b, 0xfff5f543,
+                0xff3b8eea, 0xffd670d6, 0xff29b8db, 0xffffffff
+        };
+
+        private final StringBuilder pendingEscape = new StringBuilder();
+        private final int defaultForegroundColor;
+        private final ControlHandler controlHandler;
+        private Integer foregroundColor;
+        private Integer backgroundColor;
+        private boolean bold;
+
+        AnsiRenderer(int defaultForegroundColor, ControlHandler controlHandler) {
+            this.defaultForegroundColor = defaultForegroundColor;
+            this.controlHandler = controlHandler;
+        }
+
+        void reset() {
+            pendingEscape.setLength(0);
+            foregroundColor = null;
+            backgroundColor = null;
+            bold = false;
+        }
+
+        void appendTo(SpannableStringBuilder out, CharSequence input, boolean keepNewline) {
+            for (int i = 0; i < input.length(); i++) {
+                char c = input.charAt(i);
+                if (pendingEscape.length() > 0 || c == ESC) {
+                    consumeEscapeChar(c);
+                    continue;
+                }
+                appendStyledChar(out, c, keepNewline);
+            }
+        }
+
+        CharSequence format(CharSequence input, boolean keepNewline) {
+            SpannableStringBuilder out = new SpannableStringBuilder();
+            appendTo(out, input, keepNewline);
+            return out;
+        }
+
+        private void consumeEscapeChar(char c) {
+            pendingEscape.append(c);
+            if (pendingEscape.length() == 1) {
+                return;
+            }
+            if (pendingEscape.length() == 2 && pendingEscape.charAt(1) != '[') {
+                pendingEscape.setLength(0);
+                return;
+            }
+            if (!isEscapeComplete(c)) {
+                if (pendingEscape.length() > 32) {
+                    pendingEscape.setLength(0);
+                }
+                return;
+            }
+            applyEscapeSequence(pendingEscape);
+            pendingEscape.setLength(0);
+        }
+
+        private boolean isEscapeComplete(char c) {
+            return c >= '@' && c <= '~';
+        }
+
+        private void applyEscapeSequence(CharSequence escape) {
+            if (escape.length() < 3 || escape.charAt(1) != '[') {
+                return;
+            }
+            char command = escape.charAt(escape.length() - 1);
+            String params = escape.subSequence(2, escape.length() - 1).toString();
+            if (command == 'K') {
+                controlHandler.onEraseInLine(parseFirstParam(params, 0));
+                return;
+            }
+            if (command == 'G') {
+                controlHandler.onCursorHorizontalAbsolute(parseFirstParam(params, 1));
+                return;
+            }
+            if (command != 'm') {
+                return;
+            }
+            if (params.isEmpty()) {
+                applySgrCode(0);
+                return;
+            }
+            String[] parts = params.split(";");
+            for (String part : parts) {
+                int code;
+                if (part.isEmpty()) {
+                    code = 0;
+                } else {
+                    try {
+                        code = Integer.parseInt(part);
+                    } catch (NumberFormatException ignored) {
+                        continue;
+                    }
+                }
+                applySgrCode(code);
+            }
+        }
+
+        private int parseFirstParam(String params, int defaultValue) {
+            if (params.isEmpty()) {
+                return defaultValue;
+            }
+            int separator = params.indexOf(';');
+            String first = separator >= 0 ? params.substring(0, separator) : params;
+            if (first.isEmpty()) {
+                return defaultValue;
+            }
+            try {
+                return Integer.parseInt(first);
+            } catch (NumberFormatException ignored) {
+                return defaultValue;
+            }
+        }
+
+        private void applySgrCode(int code) {
+            switch (code) {
+                case 0:
+                    foregroundColor = null;
+                    backgroundColor = null;
+                    bold = false;
+                    return;
+                case 1:
+                    bold = true;
+                    return;
+                case 22:
+                    bold = false;
+                    return;
+                case 39:
+                    foregroundColor = null;
+                    return;
+                case 49:
+                    backgroundColor = null;
+                    return;
+                default:
+                    break;
+            }
+            if (code >= 30 && code <= 37) {
+                foregroundColor = ANSI_COLORS[code - 30];
+            } else if (code >= 90 && code <= 97) {
+                foregroundColor = ANSI_BRIGHT_COLORS[code - 90];
+            } else if (code >= 40 && code <= 47) {
+                backgroundColor = ANSI_COLORS[code - 40];
+            } else if (code >= 100 && code <= 107) {
+                backgroundColor = ANSI_BRIGHT_COLORS[code - 100];
+            }
+        }
+
+        private void appendStyledChar(SpannableStringBuilder out, char c, boolean keepNewline) {
+            if (c < 32 && (!keepNewline || c != '\n')) {
+                int start = out.length();
+                out.append('^');
+                out.append((char) (c + 64));
+                applyCurrentStyle(out, start, out.length());
+                out.setSpan(new BackgroundColorSpan(caretBackground), out.length() - 2, out.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                return;
+            }
+            int start = out.length();
+            out.append(c);
+            applyCurrentStyle(out, start, out.length());
+        }
+
+        private void deleteLastChar(SpannableStringBuilder out) {
+            if (out.length() == 0) {
+                return;
+            }
+            out.delete(out.length() - 1, out.length());
+        }
+
+        private void applyCurrentStyle(SpannableStringBuilder out, int start, int end) {
+            if (start >= end) {
+                return;
+            }
+            int fg = foregroundColor != null ? foregroundColor : defaultForegroundColor;
+            out.setSpan(new ForegroundColorSpan(fg), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            if (backgroundColor != null) {
+                out.setSpan(new BackgroundColorSpan(backgroundColor), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            if (bold) {
+                out.setSpan(new StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
     }
 
 
