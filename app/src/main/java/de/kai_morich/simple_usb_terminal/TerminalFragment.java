@@ -246,7 +246,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             return true;
         } else if (id == R.id.backgroundNotification) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                if (!service.areNotificationsEnabled() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (service == null) {
+                    status("notification settings unavailable: service not connected");
+                } else if (!service.areNotificationsEnabled() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 0);
                 } else {
                     showNotificationSettings();
