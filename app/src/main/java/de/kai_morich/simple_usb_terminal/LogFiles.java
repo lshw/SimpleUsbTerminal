@@ -10,9 +10,11 @@ import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.OutputStream;
 
 final class LogFiles {
+    private static final String PUBLIC_LOGS_SUBDIR = "SimpleUsbTerminal/logs";
     private static final String PUBLIC_LOGS_DIR = Environment.DIRECTORY_DOWNLOADS + "/SimpleUsbTerminal/logs";
 
     private LogFiles() {
@@ -52,6 +54,13 @@ final class LogFiles {
         return context.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
     }
 
+    static boolean ensureLogsDirectoryExists(Context context) {
+        if (usesPublicLogs()) {
+            return ensurePublicLogsDirectoryExists(context);
+        }
+        return getLogsDir(context) != null;
+    }
+
     static OutputStream openLogStream(Context context, Uri uri, boolean append) throws java.io.IOException {
         ContentResolver resolver = context.getContentResolver();
         OutputStream stream = resolver.openOutputStream(uri, append ? "wa" : "w");
@@ -69,7 +78,7 @@ final class LogFiles {
 
     static String getLogLocation(Context context, String fileName) {
         if (usesPublicLogs()) {
-            return PUBLIC_LOGS_DIR + "/" + fileName;
+            return Environment.DIRECTORY_DOWNLOADS + "/" + PUBLIC_LOGS_SUBDIR + "/" + fileName;
         }
         File directory = getLogsDir(context);
         if (directory == null) {
@@ -80,6 +89,27 @@ final class LogFiles {
 
     static Uri getLogsDirectoryUri() {
         String documentId = "primary:" + PUBLIC_LOGS_DIR.replaceFirst("^" + Environment.DIRECTORY_DOWNLOADS, "Download");
+        Uri treeUri = DocumentsContract.buildTreeDocumentUri("com.android.externalstorage.documents", documentId);
+        return DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri));
+    }
+
+    static Uri getLogsTreeUri() {
+        String documentId = "primary:" + PUBLIC_LOGS_DIR.replaceFirst("^" + Environment.DIRECTORY_DOWNLOADS, "Download");
         return DocumentsContract.buildTreeDocumentUri("com.android.externalstorage.documents", documentId);
+    }
+
+    private static boolean ensurePublicLogsDirectoryExists(Context context) {
+        Uri probeUri = createLogUri(context, ".probe");
+        if (probeUri == null) {
+            return false;
+        }
+        try (OutputStream stream = openLogStream(context, probeUri, false)) {
+            stream.write(new byte[0]);
+            return true;
+        } catch (IOException ignored) {
+            return false;
+        } finally {
+            deleteLogUri(context, probeUri);
+        }
     }
 }

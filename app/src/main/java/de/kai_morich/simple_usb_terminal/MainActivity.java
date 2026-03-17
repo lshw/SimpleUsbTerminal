@@ -70,14 +70,19 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
     }
 
     void openLogsDirectory() {
-        if (!LogFiles.usesPublicLogs()) {
-            Toast.makeText(this, R.string.logs_open_failed, Toast.LENGTH_SHORT).show();
+        if (!LogFiles.ensureLogsDirectoryExists(this)) {
+            Toast.makeText(this, R.string.logs_create_failed, Toast.LENGTH_SHORT).show();
             return;
         }
-        Uri uri = LogFiles.getLogsDirectoryUri();
+        if (!LogFiles.usesPublicLogs()) {
+            Toast.makeText(this, R.string.logs_open_unsupported, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Uri documentUri = LogFiles.getLogsDirectoryUri();
+        Uri treeUri = LogFiles.getLogsTreeUri();
         Intent intent = new Intent(Intent.ACTION_VIEW)
-                .setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
-                .putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri)
+                .setDataAndType(documentUri, DocumentsContract.Document.MIME_TYPE_DIR)
+                .putExtra(DocumentsContract.EXTRA_INITIAL_URI, documentUri)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
@@ -86,7 +91,7 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
             startActivity(intent);
         } catch (Exception viewException) {
             Intent fallbackIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-                    .putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri)
+                    .putExtra(DocumentsContract.EXTRA_INITIAL_URI, treeUri)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)

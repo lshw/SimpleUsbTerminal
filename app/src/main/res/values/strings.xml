@@ -17,4 +17,6 @@
     <string name="communication_log_write_failed">通讯日志写入失败: %1$s</string>
     <string name="logs_open">浏览日志目录</string>
     <string name="logs_open_failed">无法打开日志目录</string>
+    <string name="logs_create_failed">无法创建日志目录</string>
+    <string name="logs_open_unsupported">当前系统暂不支持直接打开日志目录</string>
 </resources>
