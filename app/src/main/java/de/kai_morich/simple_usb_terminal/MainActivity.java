@@ -1,6 +1,7 @@
 package de.kai_morich.simple_usb_terminal;
 
 import android.app.AlertDialog;
+import android.app.DownloadManager;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -90,15 +91,10 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
         try {
             startActivity(intent);
         } catch (Exception viewException) {
-            Intent fallbackIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-                    .putExtra(DocumentsContract.EXTRA_INITIAL_URI, treeUri)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                    .addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
             try {
-                startActivity(fallbackIntent);
-            } catch (Exception treeException) {
+                startActivity(new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                Toast.makeText(this, getString(R.string.logs_open_fallback, LogFiles.getPublicLogsDisplayPath()), Toast.LENGTH_LONG).show();
+            } catch (Exception downloadsException) {
                 Toast.makeText(this, R.string.logs_open_failed, Toast.LENGTH_SHORT).show();
             }
         }

@@ -87,6 +87,10 @@ final class LogFiles {
         return new File(directory, fileName).getAbsolutePath();
     }
 
+    static String getPublicLogsDisplayPath() {
+        return Environment.DIRECTORY_DOWNLOADS + "/" + PUBLIC_LOGS_SUBDIR;
+    }
+
     static Uri getLogsDirectoryUri() {
         String documentId = "primary:" + PUBLIC_LOGS_DIR.replaceFirst("^" + Environment.DIRECTORY_DOWNLOADS, "Download");
         Uri treeUri = DocumentsContract.buildTreeDocumentUri("com.android.externalstorage.documents", documentId);
