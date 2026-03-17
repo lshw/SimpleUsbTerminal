@@ -80,16 +80,26 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
             return;
         }
         Uri documentUri = LogFiles.getLogsDirectoryUri();
-        Uri treeUri = LogFiles.getLogsTreeUri();
-        Intent intent = new Intent(Intent.ACTION_VIEW)
+        Intent browseIntent = new Intent("android.provider.action.BROWSE")
                 .setDataAndType(documentUri, DocumentsContract.Document.MIME_TYPE_DIR)
-                .putExtra(DocumentsContract.EXTRA_INITIAL_URI, documentUri)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 .addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
         try {
-            startActivity(intent);
+            startActivity(browseIntent);
+            return;
+        } catch (Exception ignored) {
+        }
+
+        Intent viewIntent = new Intent(Intent.ACTION_VIEW)
+                .setDataAndType(documentUri, DocumentsContract.Document.MIME_TYPE_DIR)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                .addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+        try {
+            startActivity(viewIntent);
         } catch (Exception viewException) {
             try {
                 startActivity(new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
