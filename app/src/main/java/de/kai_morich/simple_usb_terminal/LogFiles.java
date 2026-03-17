@@ -3,10 +3,12 @@ package de.kai_morich.simple_usb_terminal;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.DocumentsContract;
+import android.provider.MediaStore.MediaColumns;
 import android.provider.MediaStore;
 
 import java.io.File;
@@ -16,6 +18,7 @@ import java.io.OutputStream;
 final class LogFiles {
     private static final String PUBLIC_LOGS_SUBDIR = "SimpleUsbTerminal/logs";
     private static final String PUBLIC_LOGS_DIR = Environment.DIRECTORY_DOWNLOADS + "/SimpleUsbTerminal/logs";
+    private static final String PUBLIC_LOGS_RELATIVE_PATH = PUBLIC_LOGS_DIR + "/";
 
     private LogFiles() {
     }
@@ -50,7 +53,7 @@ final class LogFiles {
         ContentValues values = new ContentValues();
         values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
         values.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain");
-        values.put(MediaStore.MediaColumns.RELATIVE_PATH, PUBLIC_LOGS_DIR);
+        values.put(MediaStore.MediaColumns.RELATIVE_PATH, PUBLIC_LOGS_RELATIVE_PATH);
         return context.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
     }
 
@@ -91,6 +94,13 @@ final class LogFiles {
         return Environment.DIRECTORY_DOWNLOADS + "/" + PUBLIC_LOGS_SUBDIR;
     }
 
+    static Uri getLatestLogUri(Context context) {
+        if (usesPublicLogs()) {
+            return getLatestPublicLogUri(context);
+        }
+        return null;
+    }
+
     static Uri getLogsDirectoryUri() {
         String documentId = "primary:" + PUBLIC_LOGS_DIR.replaceFirst("^" + Environment.DIRECTORY_DOWNLOADS, "Download");
         Uri treeUri = DocumentsContract.buildTreeDocumentUri("com.android.externalstorage.documents", documentId);
@@ -114,6 +124,25 @@ final class LogFiles {
             return false;
         } finally {
             deleteLogUri(context, probeUri);
+        }
+    }
+
+    private static Uri getLatestPublicLogUri(Context context) {
+        String[] projection = {MediaColumns._ID};
+        String selection = MediaColumns.RELATIVE_PATH + "=?";
+        String[] selectionArgs = {PUBLIC_LOGS_RELATIVE_PATH};
+        String sortOrder = MediaColumns.DATE_MODIFIED + " DESC, " + MediaColumns.DATE_ADDED + " DESC";
+        try (Cursor cursor = context.getContentResolver().query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder)) {
+            if (cursor == null || !cursor.moveToFirst()) {
+                return null;
+            }
+            long id = cursor.getLong(0);
+            return Uri.withAppendedPath(MediaStore.Downloads.EXTERNAL_CONTENT_URI, String.valueOf(id));
         }
     }
 }

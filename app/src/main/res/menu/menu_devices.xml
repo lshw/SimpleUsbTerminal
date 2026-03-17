@@ -8,9 +8,13 @@
         android:id="@+id/baud_rate"
         android:title="Baud rate" />
     <item
-        android:id="@+id/openLogs"
-        android:title="@string/logs_open"
+        android:id="@+id/openLatestLog"
+        android:title="@string/logs_open_latest"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/shareLatestLog"
+        android:title="@string/logs_share_latest"
+        app:showAsAction="never" />
     <item
         android:id="@+id/about"
         android:title="@string/about" />

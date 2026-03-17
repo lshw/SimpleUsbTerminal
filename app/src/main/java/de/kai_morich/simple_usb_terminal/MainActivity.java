@@ -1,11 +1,9 @@
 package de.kai_morich.simple_usb_terminal;
 
 import android.app.AlertDialog;
-import android.app.DownloadManager;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.DocumentsContract;
 import android.widget.Toast;
 import androidx.fragment.app.FragmentManager;
 import androidx.appcompat.app.AppCompatActivity;
@@ -70,43 +68,37 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
         }
     }
 
-    void openLogsDirectory() {
-        if (!LogFiles.ensureLogsDirectoryExists(this)) {
-            Toast.makeText(this, R.string.logs_create_failed, Toast.LENGTH_SHORT).show();
+    void openLatestLog() {
+        Uri uri = LogFiles.getLatestLogUri(this);
+        if (uri == null) {
+            Toast.makeText(this, R.string.logs_latest_missing, Toast.LENGTH_SHORT).show();
             return;
         }
-        if (!LogFiles.usesPublicLogs()) {
-            Toast.makeText(this, R.string.logs_open_unsupported, Toast.LENGTH_SHORT).show();
-            return;
-        }
-        Uri documentUri = LogFiles.getLogsDirectoryUri();
-        Intent browseIntent = new Intent("android.provider.action.BROWSE")
-                .setDataAndType(documentUri, DocumentsContract.Document.MIME_TYPE_DIR)
+        Intent intent = new Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "text/plain")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                .addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try {
-            startActivity(browseIntent);
-            return;
-        } catch (Exception ignored) {
+            startActivity(Intent.createChooser(intent, getString(R.string.logs_open_latest)));
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.logs_open_failed, Toast.LENGTH_SHORT).show();
         }
+    }
 
-        Intent viewIntent = new Intent(Intent.ACTION_VIEW)
-                .setDataAndType(documentUri, DocumentsContract.Document.MIME_TYPE_DIR)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                .addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+    void shareLatestLog() {
+        Uri uri = LogFiles.getLatestLogUri(this);
+        if (uri == null) {
+            Toast.makeText(this, R.string.logs_latest_missing, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Intent intent = new Intent(Intent.ACTION_SEND)
+                .setType("text/plain")
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try {
-            startActivity(viewIntent);
-        } catch (Exception viewException) {
-            try {
-                startActivity(new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                Toast.makeText(this, getString(R.string.logs_open_fallback, LogFiles.getPublicLogsDisplayPath()), Toast.LENGTH_LONG).show();
-            } catch (Exception downloadsException) {
-                Toast.makeText(this, R.string.logs_open_failed, Toast.LENGTH_SHORT).show();
-            }
+            startActivity(Intent.createChooser(intent, getString(R.string.logs_share_latest)));
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.logs_share_failed, Toast.LENGTH_SHORT).show();
         }
     }
 

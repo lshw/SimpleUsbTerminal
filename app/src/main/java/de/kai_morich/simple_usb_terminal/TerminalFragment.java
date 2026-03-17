@@ -370,8 +370,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             setCommunicationLogHex(!commLogHex);
             item.setChecked(commLogHex);
             return true;
-        } else if (id == R.id.openLogs) {
-            ((MainActivity) requireActivity()).openLogsDirectory();
+        } else if (id == R.id.openLatestLog) {
+            ((MainActivity) requireActivity()).openLatestLog();
+            return true;
+        } else if (id == R.id.shareLatestLog) {
+            ((MainActivity) requireActivity()).shareLatestLog();
             return true;
         } else if (id == R.id.controlLines) {
             item.setChecked(controlLines.showControlLines(!item.isChecked()));
