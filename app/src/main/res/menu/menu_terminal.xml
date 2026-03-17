@@ -26,6 +26,11 @@
         android:checkable="true"
         app:showAsAction="never" />
     <item
+        android:id="@+id/communicationLogHex"
+        android:title="@string/communication_log_hex"
+        android:checkable="true"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/openLogs"
         android:title="@string/logs_open"
         app:showAsAction="ifRoom" />

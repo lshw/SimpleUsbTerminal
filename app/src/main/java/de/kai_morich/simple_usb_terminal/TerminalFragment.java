@@ -72,6 +72,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private enum Connected { False, Pending, True }
     private static final String PREFS_NAME = "terminal";
     private static final String PREF_COMM_LOG_ENABLED = "comm_log_enabled";
+    private static final String PREF_COMM_LOG_HEX = "comm_log_hex";
 
     private final Handler mainLooper;
     private final BroadcastReceiver broadcastReceiver;
@@ -94,6 +95,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private boolean reconnectPending = false;
     private enum SendButtonState {Idle, Busy, Disabled};
     private boolean commLogEnabled;
+    private boolean commLogHex;
     private File commLogFile;
     private Uri commLogUri;
     private String commLogLocation;
@@ -148,6 +150,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         baudRate = getArguments().getInt("baud");
         SharedPreferences preferences = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         commLogEnabled = preferences.getBoolean(PREF_COMM_LOG_ENABLED, false);
+        commLogHex = preferences.getBoolean(PREF_COMM_LOG_HEX, false);
     }
 
     @Override
@@ -309,6 +312,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         menu.findItem(R.id.characterMode).setChecked(characterMode);
         menu.findItem(R.id.hex).setChecked(hexEnabled);
         menu.findItem(R.id.communicationLog).setChecked(commLogEnabled);
+        menu.findItem(R.id.communicationLogHex).setChecked(commLogHex);
         controlLines.onPrepareOptionsMenu(menu);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             menu.findItem(R.id.backgroundNotification).setChecked(service != null && service.areNotificationsEnabled());
@@ -361,6 +365,10 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         } else if (id == R.id.communicationLog) {
             setCommunicationLogEnabled(!commLogEnabled);
             item.setChecked(commLogEnabled);
+            return true;
+        } else if (id == R.id.communicationLogHex) {
+            setCommunicationLogHex(!commLogHex);
+            item.setChecked(commLogHex);
             return true;
         } else if (id == R.id.openLogs) {
             ((MainActivity) requireActivity()).openLogsDirectory();
@@ -681,6 +689,17 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         }
     }
 
+    private void setCommunicationLogHex(boolean enabled) {
+        commLogHex = enabled;
+        requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(PREF_COMM_LOG_HEX, enabled)
+                .apply();
+        if (commLogEnabled) {
+            status(getString(enabled ? R.string.communication_log_format_hex : R.string.communication_log_format_text));
+        }
+    }
+
     private boolean openCommunicationLog() {
         if (commLogWriter != null) {
             return true;
@@ -754,15 +773,23 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             requireActivity().invalidateOptionsMenu();
             return;
         }
-        String text = new String(data, StandardCharsets.UTF_8)
-                .replace("\r", "\\r")
-                .replace("\n", "\\n");
         try {
-            commLogWriter.write(formatTimestamp(System.currentTimeMillis())
-                    + " " + direction
-                    + " len=" + data.length
-                    + " text=" + text
-                    + " hex=" + TextUtil.toHexString(data));
+            StringBuilder line = new StringBuilder();
+            line.append(formatTimestamp(System.currentTimeMillis()))
+                    .append(' ')
+                    .append(direction)
+                    .append(" len=")
+                    .append(data.length)
+                    .append(' ');
+            if (commLogHex) {
+                line.append("hex=").append(TextUtil.toHexString(data));
+            } else {
+                String text = new String(data, StandardCharsets.UTF_8)
+                        .replace("\r", "\\r")
+                        .replace("\n", "\\n");
+                line.append("text=").append(text);
+            }
+            commLogWriter.write(line.toString());
             commLogWriter.newLine();
             commLogWriter.flush();
         } catch (IOException e) {

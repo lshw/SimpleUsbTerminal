@@ -15,6 +15,9 @@
     <string name="communication_log_disabled">通讯日志保存已关闭</string>
     <string name="communication_log_enable_failed">通讯日志保存开启失败</string>
     <string name="communication_log_write_failed">通讯日志写入失败: %1$s</string>
+    <string name="communication_log_hex">通讯日志 HEX 格式</string>
+    <string name="communication_log_format_text">通讯日志格式已切换为文本</string>
+    <string name="communication_log_format_hex">通讯日志格式已切换为 HEX</string>
     <string name="logs_open">浏览日志目录</string>
     <string name="logs_open_failed">无法打开日志目录</string>
     <string name="logs_create_failed">无法创建日志目录</string>
