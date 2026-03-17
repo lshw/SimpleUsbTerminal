@@ -48,17 +48,19 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
     void showAboutDialog() {
         String appName = getString(R.string.app_name);
         String version = getString(R.string.version_label, BuildConfig.VERSION_NAME);
-        String message = getString(R.string.about_message, appName, version);
+        String deviceDesc = getString(R.string.about_device_desc);
+        String message = getString(R.string.about_message, appName, version, deviceDesc);
         new AlertDialog.Builder(this)
                 .setTitle(R.string.about)
                 .setMessage(message)
-                .setPositiveButton(R.string.about_web, (dialog, which) -> openWebsite())
+                .setPositiveButton(R.string.about_web, (dialog, which) -> openUrl(R.string.about_website_url))
+                .setNeutralButton(R.string.about_product, (dialog, which) -> openUrl(R.string.about_product_url))
                 .setNegativeButton(android.R.string.ok, null)
                 .show();
     }
 
-    private void openWebsite() {
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.about_website_url)));
+    private void openUrl(int urlResId) {
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(urlResId)));
         try {
             startActivity(intent);
         } catch (Exception e) {
