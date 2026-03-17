@@ -4,14 +4,11 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.widget.Toast;
 import androidx.fragment.app.FragmentManager;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-
-import java.io.File;
 
 public class MainActivity extends AppCompatActivity implements FragmentManager.OnBackStackChangedListener {
 
@@ -73,16 +70,11 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
     }
 
     void openLogsDirectory() {
-        File logsDir = LogFiles.getExternalLogsDir(this);
-        if (logsDir == null) {
+        if (!LogFiles.usesPublicLogs()) {
             Toast.makeText(this, R.string.logs_open_failed, Toast.LENGTH_SHORT).show();
             return;
         }
-        Uri uri = buildExternalLogsUri(logsDir);
-        if (uri == null) {
-            Toast.makeText(this, R.string.logs_open_failed, Toast.LENGTH_SHORT).show();
-            return;
-        }
+        Uri uri = LogFiles.getLogsDirectoryUri();
         Intent intent = new Intent(Intent.ACTION_VIEW)
                 .setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
                 .putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri)
@@ -105,18 +97,6 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
                 Toast.makeText(this, R.string.logs_open_failed, Toast.LENGTH_SHORT).show();
             }
         }
-    }
-
-    private Uri buildExternalLogsUri(File logsDir) {
-        File externalRoot = Environment.getExternalStorageDirectory();
-        String rootPath = externalRoot.getAbsolutePath();
-        String logsPath = logsDir.getAbsolutePath();
-        if (!logsPath.startsWith(rootPath + File.separator)) {
-            return null;
-        }
-        String relativePath = logsPath.substring(rootPath.length() + 1).replace(File.separatorChar, '/');
-        String documentId = "primary:" + relativePath;
-        return DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", documentId);
     }
 
 }

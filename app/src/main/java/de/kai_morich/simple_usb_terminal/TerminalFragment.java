@@ -14,6 +14,7 @@ import android.content.ServiceConnection;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -94,6 +95,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private enum SendButtonState {Idle, Busy, Disabled};
     private boolean commLogEnabled;
     private File commLogFile;
+    private Uri commLogUri;
+    private String commLogLocation;
     private BufferedWriter commLogWriter;
 
     private ControlLines controlLines = new ControlLines();
@@ -666,7 +669,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         preferences.edit().putBoolean(PREF_COMM_LOG_ENABLED, enabled).apply();
         if (enabled) {
             if (openCommunicationLog()) {
-                status(getString(R.string.communication_log_enabled, commLogFile.getAbsolutePath()));
+                status(getString(R.string.communication_log_enabled, commLogLocation));
             } else {
                 commLogEnabled = false;
                 preferences.edit().putBoolean(PREF_COMM_LOG_ENABLED, false).apply();
@@ -682,14 +685,24 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         if (commLogWriter != null) {
             return true;
         }
-        File directory = LogFiles.getLogsDir(requireContext());
-        if (directory == null) {
-            return false;
-        }
         String fileName = "comm-" + new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date()) + ".log";
-        commLogFile = new File(directory, fileName);
+        commLogLocation = LogFiles.getLogLocation(requireContext(), fileName);
         try {
-            commLogWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(commLogFile, true), StandardCharsets.UTF_8));
+            if (LogFiles.usesPublicLogs()) {
+                commLogUri = LogFiles.createLogUri(requireContext(), fileName);
+                if (commLogUri == null) {
+                    return false;
+                }
+                commLogWriter = new BufferedWriter(new OutputStreamWriter(LogFiles.openLogStream(requireContext(), commLogUri, false), StandardCharsets.UTF_8));
+            } else {
+                File directory = LogFiles.getLogsDir(requireContext());
+                if (directory == null) {
+                    return false;
+                }
+                commLogFile = new File(directory, fileName);
+                commLogLocation = commLogFile.getAbsolutePath();
+                commLogWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(commLogFile, true), StandardCharsets.UTF_8));
+            }
             commLogWriter.write("# SimpleUsbTerminal communication log");
             commLogWriter.newLine();
             commLogWriter.write("# created=" + formatTimestamp(System.currentTimeMillis()));
@@ -699,7 +712,10 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             commLogWriter.flush();
             return true;
         } catch (IOException e) {
+            LogFiles.deleteLogUri(requireContext(), commLogUri);
             commLogFile = null;
+            commLogUri = null;
+            commLogLocation = null;
             commLogWriter = null;
             return false;
         }
@@ -708,6 +724,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private void closeCommunicationLog() {
         if (commLogWriter == null) {
             commLogFile = null;
+            commLogUri = null;
+            commLogLocation = null;
             return;
         }
         try {
@@ -717,6 +735,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         } finally {
             commLogWriter = null;
             commLogFile = null;
+            commLogUri = null;
+            commLogLocation = null;
         }
     }
 
