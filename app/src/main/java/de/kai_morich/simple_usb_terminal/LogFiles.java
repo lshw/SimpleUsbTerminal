@@ -9,8 +9,16 @@ final class LogFiles {
     private LogFiles() {
     }
 
-    static File getLogsDir(Context context) {
+    static File getExternalLogsDir(Context context) {
         File baseDir = context.getExternalFilesDir("logs");
+        if (baseDir != null && (baseDir.exists() || baseDir.mkdirs())) {
+            return baseDir;
+        }
+        return null;
+    }
+
+    static File getLogsDir(Context context) {
+        File baseDir = getExternalLogsDir(context);
         if (baseDir == null) {
             baseDir = new File(context.getFilesDir(), "logs");
         }

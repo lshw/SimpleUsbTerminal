@@ -4,8 +4,9 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.DocumentsContract;
 import android.widget.Toast;
-import androidx.core.content.FileProvider;
 import androidx.fragment.app.FragmentManager;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -72,20 +73,50 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
     }
 
     void openLogsDirectory() {
-        File logsDir = LogFiles.getLogsDir(this);
+        File logsDir = LogFiles.getExternalLogsDir(this);
         if (logsDir == null) {
             Toast.makeText(this, R.string.logs_open_failed, Toast.LENGTH_SHORT).show();
             return;
         }
-        Uri uri = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".fileprovider", logsDir);
-        Intent intent = new Intent(Intent.ACTION_VIEW)
-                .setDataAndType(uri, "*/*")
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        try {
-            startActivity(Intent.createChooser(intent, getString(R.string.logs_open)));
-        } catch (Exception e) {
+        Uri uri = buildExternalLogsUri(logsDir);
+        if (uri == null) {
             Toast.makeText(this, R.string.logs_open_failed, Toast.LENGTH_SHORT).show();
+            return;
         }
+        Intent intent = new Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                .putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                .addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+        try {
+            startActivity(intent);
+        } catch (Exception viewException) {
+            Intent fallbackIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                    .putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    .addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+            try {
+                startActivity(fallbackIntent);
+            } catch (Exception treeException) {
+                Toast.makeText(this, R.string.logs_open_failed, Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private Uri buildExternalLogsUri(File logsDir) {
+        File externalRoot = Environment.getExternalStorageDirectory();
+        String rootPath = externalRoot.getAbsolutePath();
+        String logsPath = logsDir.getAbsolutePath();
+        if (!logsPath.startsWith(rootPath + File.separator)) {
+            return null;
+        }
+        String relativePath = logsPath.substring(rootPath.length() + 1).replace(File.separatorChar, '/');
+        String documentId = "primary:" + relativePath;
+        return DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", documentId);
     }
 
 }
