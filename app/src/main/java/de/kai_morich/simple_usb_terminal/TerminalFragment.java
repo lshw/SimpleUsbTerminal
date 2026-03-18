@@ -242,6 +242,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         int receiveColor = getResources().getColor(R.color.colorRecieveText);
         receiveText.setTextColor(receiveColor); // set as default color to reduce number of spans
         receiveText.setMovementMethod(ScrollingMovementMethod.getInstance());
+        receiveText.setHorizontallyScrolling(false);
         ansiRenderer = new TextUtil.AnsiRenderer(receiveColor, new TextUtil.AnsiRenderer.ControlHandler() {
             @Override
             public void onEraseInLine(int mode) {
