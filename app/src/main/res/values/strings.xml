@@ -18,6 +18,7 @@
     <string name="communication_log_hex">通讯日志 HEX 格式</string>
     <string name="communication_log_format_text">通讯日志格式已切换为文本</string>
     <string name="communication_log_format_hex">通讯日志格式已切换为 HEX</string>
+    <string name="hex_toggle_too_fast">HEX 模式切换不能快于 1 秒</string>
     <string name="logs_open">浏览日志目录</string>
     <string name="logs_open_latest">打开最新日志</string>
     <string name="logs_share_latest">分享最新日志</string>

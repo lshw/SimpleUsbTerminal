@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.text.Selection;
 import android.text.Editable;
 import android.text.Spannable;
@@ -57,6 +58,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -73,6 +75,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private static final String PREFS_NAME = "terminal";
     private static final String PREF_COMM_LOG_ENABLED = "comm_log_enabled";
     private static final String PREF_COMM_LOG_HEX = "comm_log_hex";
+    private static final long HEX_TOGGLE_MIN_INTERVAL_MILLIS = 1000;
 
     private final Handler mainLooper;
     private final BroadcastReceiver broadcastReceiver;
@@ -99,7 +102,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private File commLogFile;
     private Uri commLogUri;
     private String commLogLocation;
+    private OutputStream commLogStream;
     private BufferedWriter commLogWriter;
+    private long lastHexToggleAtMillis;
 
     private ControlLines controlLines = new ControlLines();
     private XonXoffFilter flowControlFilter;
@@ -336,7 +341,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         } else if (id == R.id.characterMode) {
             characterMode = !characterMode;
             if (characterMode && hexEnabled) {
-                hexEnabled = false;
+                applyHexMode(false, false);
                 sendText.setText("");
                 hexWatcher.enable(false);
             }
@@ -356,7 +361,10 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             builder.create().show();
             return true;
         } else if (id == R.id.hex) {
-            hexEnabled = !hexEnabled;
+            if (!applyHexMode(!hexEnabled, true)) {
+                item.setChecked(hexEnabled);
+                return true;
+            }
             sendText.setText("");
             hexWatcher.enable(hexEnabled);
             updateInputModeUi();
@@ -415,6 +423,23 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private boolean applyHexMode(boolean enabled, boolean enforceMinInterval) {
+        if (hexEnabled == enabled) {
+            return true;
+        }
+        long now = SystemClock.elapsedRealtime();
+        if (enforceMinInterval && now - lastHexToggleAtMillis < HEX_TOGGLE_MIN_INTERVAL_MILLIS) {
+            Toast.makeText(getActivity(), R.string.hex_toggle_too_fast, Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        hexEnabled = enabled;
+        lastHexToggleAtMillis = now;
+        if (commLogEnabled) {
+            reopenCommunicationLog();
+        }
+        return true;
     }
 
     /*
@@ -704,7 +729,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     }
 
     private boolean openCommunicationLog() {
-        if (commLogWriter != null) {
+        if (commLogWriter != null || commLogStream != null) {
             return true;
         }
         String fileName = "comm-" + new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date()) + ".log";
@@ -715,7 +740,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 if (commLogUri == null) {
                     return false;
                 }
-                commLogWriter = new BufferedWriter(new OutputStreamWriter(LogFiles.openLogStream(requireContext(), commLogUri, false), StandardCharsets.UTF_8));
+                commLogStream = LogFiles.openLogStream(requireContext(), commLogUri, false);
             } else {
                 File directory = LogFiles.getLogsDir(requireContext());
                 if (directory == null) {
@@ -723,38 +748,66 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 }
                 commLogFile = new File(directory, fileName);
                 commLogLocation = commLogFile.getAbsolutePath();
-                commLogWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(commLogFile, true), StandardCharsets.UTF_8));
+                commLogStream = new FileOutputStream(commLogFile, true);
             }
-            commLogWriter.write("# SimpleUsbTerminal communication log");
-            commLogWriter.newLine();
-            commLogWriter.write("# created=" + formatTimestamp(System.currentTimeMillis()));
-            commLogWriter.newLine();
-            commLogWriter.write("# baudRate=" + baudRate);
-            commLogWriter.newLine();
-            commLogWriter.flush();
+            if (hexEnabled) {
+                commLogWriter = new BufferedWriter(new OutputStreamWriter(commLogStream, StandardCharsets.UTF_8));
+                commLogWriter.write("# SimpleUsbTerminal communication log");
+                commLogWriter.newLine();
+                commLogWriter.write("# created=" + formatTimestamp(System.currentTimeMillis()));
+                commLogWriter.newLine();
+                commLogWriter.write("# baudRate=" + baudRate);
+                commLogWriter.newLine();
+                commLogWriter.flush();
+            }
             return true;
         } catch (IOException e) {
             LogFiles.deleteLogUri(requireContext(), commLogUri);
             commLogFile = null;
             commLogUri = null;
             commLogLocation = null;
+            commLogStream = null;
             commLogWriter = null;
             return false;
         }
     }
 
+    private void reopenCommunicationLog() {
+        if (!commLogEnabled) {
+            return;
+        }
+        closeCommunicationLog();
+        if (openCommunicationLog()) {
+            status(getString(R.string.communication_log_enabled, commLogLocation));
+        } else {
+            commLogEnabled = false;
+            requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .putBoolean(PREF_COMM_LOG_ENABLED, false)
+                    .apply();
+            status(getString(R.string.communication_log_enable_failed));
+            requireActivity().invalidateOptionsMenu();
+        }
+    }
+
     private void closeCommunicationLog() {
-        if (commLogWriter == null) {
+        if (commLogWriter == null && commLogStream == null) {
             commLogFile = null;
             commLogUri = null;
             commLogLocation = null;
             return;
         }
         try {
-            commLogWriter.flush();
-            commLogWriter.close();
+            if (commLogWriter != null) {
+                commLogWriter.flush();
+                commLogWriter.close();
+            } else if (commLogStream != null) {
+                commLogStream.flush();
+                commLogStream.close();
+            }
         } catch (IOException ignored) {
         } finally {
+            commLogStream = null;
             commLogWriter = null;
             commLogFile = null;
             commLogUri = null;
@@ -777,6 +830,14 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             return;
         }
         try {
+            if (!hexEnabled) {
+                if (!"RX".equals(direction) || commLogStream == null) {
+                    return;
+                }
+                commLogStream.write(data);
+                commLogStream.flush();
+                return;
+            }
             StringBuilder line = new StringBuilder();
             line.append(formatTimestamp(System.currentTimeMillis()))
                     .append(' ')
