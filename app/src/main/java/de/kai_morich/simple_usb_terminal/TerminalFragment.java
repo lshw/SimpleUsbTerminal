@@ -555,8 +555,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         String msg;
         byte[] data;
         if(hexEnabled) {
+            byte[] payload = maybeAppendModbusCrc(TextUtil.fromHexString(str));
             StringBuilder sb = new StringBuilder();
-            TextUtil.toHexString(sb, TextUtil.fromHexString(str));
+            TextUtil.toHexString(sb, payload);
             if (appendNewline) {
                 TextUtil.toHexString(sb, newline.getBytes());
             }
@@ -683,6 +684,36 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         if (existingLineStart < existing.length()) {
             existing.delete(existingLineStart, existing.length());
         }
+    }
+
+    private byte[] maybeAppendModbusCrc(byte[] payload) {
+        if (payload.length != 6) {
+            return payload;
+        }
+        int function = payload[1] & 0xff;
+        if (function != 0x03 && function != 0x06) {
+            return payload;
+        }
+        int crc = calculateModbusCrc(payload);
+        byte[] withCrc = Arrays.copyOf(payload, payload.length + 2);
+        withCrc[payload.length] = (byte) (crc & 0xff);
+        withCrc[payload.length + 1] = (byte) ((crc >> 8) & 0xff);
+        return withCrc;
+    }
+
+    private int calculateModbusCrc(byte[] data) {
+        int crc = 0xFFFF;
+        for (byte b : data) {
+            crc ^= b & 0xff;
+            for (int i = 0; i < 8; i++) {
+                if ((crc & 0x0001) != 0) {
+                    crc = (crc >> 1) ^ 0xA001;
+                } else {
+                    crc >>= 1;
+                }
+            }
+        }
+        return crc & 0xFFFF;
     }
 
     private int findLineStart(CharSequence text) {
