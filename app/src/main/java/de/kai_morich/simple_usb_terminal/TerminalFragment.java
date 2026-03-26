@@ -556,6 +556,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             Toast.makeText(getActivity(), "not connected", Toast.LENGTH_SHORT).show();
             return;
         }
+        if (hexEnabled) {
+            appendNewline = false;
+        }
         String msg;
         byte[] data;
         if(hexEnabled) {
