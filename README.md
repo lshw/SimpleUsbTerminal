@@ -1,6 +1,5 @@
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/83070da7805b4899820e285d2f7847b9)](https://www.codacy.com/manual/kai-morich/SimpleUsbTerminal?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=kai-morich/SimpleUsbTerminal&amp;utm_campaign=Badge_Grade)
 
-# SimpleUsbTerminal
+# UsbTerminal
 
 This Android app provides a line-oriented terminal / console for devices with a serial / UART interface connected with a USB-to-serial-converter.
 
@@ -15,6 +14,7 @@ and devices implementing the USB CDC protocol like
 - Digispark using V-USB software USB
 - BBC micro:bit using ARM mbed DAPLink firmware
 - Pi Pico
+- ESP32
 - ...
 
 ## Features
@@ -28,9 +28,5 @@ and devices implementing the USB CDC protocol like
 ## Credits
 
 The app uses the [usb-serial-for-android](https://github.com/mik3y/usb-serial-for-android) library.
+This app is based on [SimpleUsbTerminal](https://github.com/kai-morich/SimpleUsbTerminal), and has been modified to add character mode and hex mode, and supports Modbus auto-completion of CRC.
 
-## Motivation
-
-I got various requests asking for help with Android development or source code for my
-[Serial USB Terminal](https://play.google.com/store/apps/details?id=de.kai_morich.serial_usb_terminal) app.
-Here you find a simplified version of my app.
