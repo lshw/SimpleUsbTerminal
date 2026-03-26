@@ -366,9 +366,13 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 item.setChecked(hexEnabled);
                 return true;
             }
+            if (hexEnabled) {
+                characterMode = false;
+            }
             sendText.setText("");
             hexWatcher.enable(hexEnabled);
             updateInputModeUi();
+            requireActivity().invalidateOptionsMenu();
             item.setChecked(hexEnabled);
             return true;
         } else if (id == R.id.communicationLog) {
@@ -922,7 +926,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         } else {
             sendText.setHint("");
         }
-        sendPanel.setVisibility(characterMode ? View.GONE : View.VISIBLE);
+        sendPanel.setVisibility(characterMode && !hexEnabled ? View.GONE : View.VISIBLE);
         characterInput.setVisibility(characterMode && !hexEnabled ? View.VISIBLE : View.GONE);
         if (characterMode && !hexEnabled) {
             if (characterInput.getText() != null && characterInput.getText().length() > 0) {
