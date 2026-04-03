@@ -42,7 +42,7 @@
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/shareLatestLog"
-        android:title="@string/logs_share_latest"
+        android:title="@string/logs_open_communication"
         app:showAsAction="never" />
     <item
         android:id="@+id/controlLines"

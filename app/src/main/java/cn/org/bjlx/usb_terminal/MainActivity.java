@@ -1,9 +1,12 @@
 package cn.org.bjlx.usb_terminal;
 
 import android.app.AlertDialog;
+import android.app.DownloadManager;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.DocumentsContract;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.FragmentManager;
@@ -129,19 +132,21 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
     }
 
     void shareLatestLog() {
-        Uri uri = LogFiles.getLatestLogUri(this);
-        if (uri == null) {
-            Toast.makeText(this, R.string.logs_latest_missing, Toast.LENGTH_SHORT).show();
-            return;
-        }
-        Intent intent = new Intent(Intent.ACTION_SEND)
-                .setType("text/plain")
-                .putExtra(Intent.EXTRA_STREAM, uri)
+        Intent intent = new Intent(Intent.ACTION_VIEW)
+                .setDataAndType(LogFiles.getLogsDirectoryUri(), DocumentsContract.Document.MIME_TYPE_DIR)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try {
-            startActivity(Intent.createChooser(intent, getString(R.string.logs_share_latest)));
+            startActivity(intent);
         } catch (Exception e) {
-            Toast.makeText(this, R.string.logs_share_failed, Toast.LENGTH_SHORT).show();
+            Intent fallbackIntent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try {
+                startActivity(fallbackIntent);
+                Toast.makeText(this, getString(R.string.logs_open_fallback, LogFiles.getPublicLogsDisplayPath()), Toast.LENGTH_LONG).show();
+            } catch (Exception fallbackError) {
+                Toast.makeText(this, R.string.logs_open_unsupported, Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
