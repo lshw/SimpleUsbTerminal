@@ -96,6 +96,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private CharacterModeEditText characterInput;
     private ImageButton sendBtn;
     private View sendPanel;
+    private View terminalRoot;
     private TextUtil.HexWatcher hexWatcher;
 
     private Connected connected = Connected.False;
@@ -261,7 +262,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         receiveText.setTextColor(receiveColor); // set as default color to reduce number of spans
         receiveText.setMovementMethod(ScrollingMovementMethod.getInstance());
         receiveText.setHorizontallyScrolling(false);
-        View terminalRoot = view.findViewById(R.id.terminal_root);
+        terminalRoot = view.findViewById(R.id.terminal_root);
         ansiRenderer = new TextUtil.AnsiRenderer(receiveColor, new TextUtil.AnsiRenderer.ControlHandler() {
             @Override
             public void onEraseInLine(int mode) {
@@ -606,6 +607,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         service.disconnect();
         updateSendBtn(SendButtonState.Idle);
         usbSerialPort = null;
+        updateKeepScreenOn(false);
     }
 
     private UsbDevice findDevice(UsbManager usbManager) {
@@ -1136,6 +1138,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         connected = Connected.True;
         applyPreferredFlowControl(false);
         controlLines.start();
+        updateKeepScreenOn(true);
     }
 
     @Override
@@ -1159,6 +1162,12 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     public void onSerialIoError(Exception e) {
         status(getString(R.string.status_connection_lost, e.getMessage()));
         disconnect(true);
+    }
+
+    private void updateKeepScreenOn(boolean keepScreenOn) {
+        if (terminalRoot != null) {
+            terminalRoot.setKeepScreenOn(keepScreenOn);
+        }
     }
 
     private void enqueueReceivedData(byte[] data) {
