@@ -21,7 +21,6 @@
     <string name="hex_toggle_too_fast">HEXモードの切り替えは1秒に1回までです</string>
     <string name="logs_open">ログフォルダーを開く</string>
     <string name="logs_open_fallback">ダウンロードフォルダーを開きました。%1$s に移動してください</string>
-    <string name="logs_create_failed">ログフォルダーを作成できません</string>
     <string name="logs_open_unsupported">このシステムではログフォルダーを直接開けません</string>
     <string name="menu_refresh_devices">デバイスを更新</string>
     <string name="menu_baud_rate">通信パラメーター設定</string>

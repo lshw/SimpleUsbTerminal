@@ -21,7 +21,6 @@
     <string name="hex_toggle_too_fast">HEX mode cannot be toggled faster than once per second</string>
     <string name="logs_open">Open log directory</string>
     <string name="logs_open_fallback">Downloads opened. Please navigate to %1$s</string>
-    <string name="logs_create_failed">Unable to create log directory</string>
     <string name="logs_open_unsupported">This system does not support opening the log directory directly</string>
     <string name="menu_refresh_devices">Refresh Devices</string>
     <string name="menu_baud_rate">Communication settings</string>

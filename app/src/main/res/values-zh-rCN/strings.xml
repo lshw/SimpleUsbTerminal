@@ -21,7 +21,6 @@
     <string name="hex_toggle_too_fast">HEX 模式切换不能快于 1 秒</string>
     <string name="logs_open">浏览日志目录</string>
     <string name="logs_open_fallback">已打开下载目录，请进入 %1$s</string>
-    <string name="logs_create_failed">无法创建日志目录</string>
     <string name="logs_open_unsupported">当前系统暂不支持直接打开日志目录</string>
     <string name="menu_refresh_devices">刷新设备</string>
     <string name="menu_baud_rate">通讯参数设置</string>
