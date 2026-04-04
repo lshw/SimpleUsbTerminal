@@ -131,10 +131,6 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
         }
     }
 
-    void shareLatestLog() {
-        openLatestLog();
-    }
-
     private void openLogsDirectory() {
         Intent intent = new Intent(Intent.ACTION_VIEW)
                 .setDataAndType(LogFiles.getLogsDirectoryUri(), DocumentsContract.Document.MIME_TYPE_DIR)

@@ -368,7 +368,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             item.setChecked(commLogHex);
             return true;
         } else if (id == R.id.shareLatestLog) {
-            ((MainActivity) requireActivity()).shareLatestLog();
+            ((MainActivity) requireActivity()).openLatestLog();
             return true;
         } else if (id == R.id.language) {
             ((MainActivity) requireActivity()).showLanguageDialog();
@@ -434,10 +434,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         }
         try {
             usbSerialPort.setFlowControl(UsbSerialPort.FlowControl.NONE);
-            controlLines.flowControl = UsbSerialPort.FlowControl.NONE;
             controlLines.start();
         } catch (Exception e) {
-            controlLines.flowControl = UsbSerialPort.FlowControl.NONE;
             status(getString(R.string.status_set_flow_control_failed, e.getClass().getName(), e.getMessage()));
         }
     }
@@ -584,7 +582,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     }
 
     private void sendAgain(byte[] data0, int offset) {
-        updateSendBtn(controlLines.sendAllowed ? SendButtonState.Busy : SendButtonState.Disabled);
+        updateSendBtn(SendButtonState.Busy);
         if (connected != Connected.True) {
             return;
         }
@@ -603,7 +601,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         } catch (Exception e) {
             onSerialIoError(e);
         }
-        updateSendBtn(controlLines.sendAllowed ? SendButtonState.Idle : SendButtonState.Disabled);
+        updateSendBtn(SendButtonState.Idle);
     }
 
     private void receive(ArrayDeque<byte[]> datas) {
@@ -1178,10 +1176,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         private View frame;
         private ToggleButton rtsBtn, ctsBtn, dtrBtn, dsrBtn, cdBtn, riBtn;
 
-        private boolean showControlLines;                                               // show & update control line buttons
-        private UsbSerialPort.FlowControl flowControl = UsbSerialPort.FlowControl.NONE; // !NONE: update send button state
-
-        boolean sendAllowed = true;
+        private boolean showControlLines;
 
         ControlLines() {
             runnable = this::run; // w/o explicit Runnable, a new lambda would be created on each postDelayed, which would not be found again by removeCallbacks
@@ -1230,7 +1225,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 }
             }
             frame.setVisibility(showControlLines ? View.VISIBLE : View.GONE);
-            sendAllowed = true;
             updateSendBtn(SendButtonState.Idle);
 
             mainLooper.removeCallbacks(runnable);
@@ -1241,7 +1235,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
         void stop() {
             mainLooper.removeCallbacks(runnable);
-            sendAllowed = true;
             updateSendBtn(SendButtonState.Idle);
             rtsBtn.setChecked(false);
             ctsBtn.setChecked(false);

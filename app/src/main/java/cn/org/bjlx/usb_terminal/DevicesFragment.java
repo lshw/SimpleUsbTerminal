@@ -107,7 +107,7 @@ public class DevicesFragment extends ListFragment {
             showCommunicationSettingsDialog();
             return true;
         } else if (id == R.id.shareLatestLog) {
-            ((MainActivity) requireActivity()).shareLatestLog();
+            ((MainActivity) requireActivity()).openLatestLog();
             return true;
         } else if (id == R.id.language) {
             ((MainActivity) requireActivity()).showLanguageDialog();
