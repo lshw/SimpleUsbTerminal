@@ -20,7 +20,6 @@
     <string name="communication_log_format_hex">Communication log format switched to HEX</string>
     <string name="hex_toggle_too_fast">HEX mode cannot be toggled faster than once per second</string>
     <string name="logs_open">Open log directory</string>
-    <string name="logs_open_latest">Open latest log</string>
     <string name="logs_open_fallback">Downloads opened. Please navigate to %1$s</string>
     <string name="logs_create_failed">Unable to create log directory</string>
     <string name="logs_open_unsupported">This system does not support opening the log directory directly</string>

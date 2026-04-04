@@ -94,22 +94,10 @@ final class LogFiles {
         return Environment.DIRECTORY_DOWNLOADS + "/" + PUBLIC_LOGS_SUBDIR;
     }
 
-    static Uri getLatestLogUri(Context context) {
-        if (usesPublicLogs()) {
-            return getLatestPublicLogUri(context);
-        }
-        return null;
-    }
-
     static Uri getLogsDirectoryUri() {
         String documentId = "primary:" + PUBLIC_LOGS_DIR.replaceFirst("^" + Environment.DIRECTORY_DOWNLOADS, "Download");
         Uri treeUri = DocumentsContract.buildTreeDocumentUri("com.android.externalstorage.documents", documentId);
         return DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri));
-    }
-
-    static Uri getLogsTreeUri() {
-        String documentId = "primary:" + PUBLIC_LOGS_DIR.replaceFirst("^" + Environment.DIRECTORY_DOWNLOADS, "Download");
-        return DocumentsContract.buildTreeDocumentUri("com.android.externalstorage.documents", documentId);
     }
 
     private static boolean ensurePublicLogsDirectoryExists(Context context) {
@@ -127,22 +115,4 @@ final class LogFiles {
         }
     }
 
-    private static Uri getLatestPublicLogUri(Context context) {
-        String[] projection = {MediaColumns._ID};
-        String selection = MediaColumns.RELATIVE_PATH + "=? AND " + MediaColumns.DISPLAY_NAME + " LIKE ?";
-        String[] selectionArgs = {PUBLIC_LOGS_RELATIVE_PATH, "%.log"};
-        String sortOrder = MediaColumns.DATE_MODIFIED + " DESC, " + MediaColumns.DATE_ADDED + " DESC";
-        try (Cursor cursor = context.getContentResolver().query(
-                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                projection,
-                selection,
-                selectionArgs,
-                sortOrder)) {
-            if (cursor == null || !cursor.moveToFirst()) {
-                return null;
-            }
-            long id = cursor.getLong(0);
-            return Uri.withAppendedPath(MediaStore.Downloads.EXTERNAL_CONTENT_URI, String.valueOf(id));
-        }
-    }
 }

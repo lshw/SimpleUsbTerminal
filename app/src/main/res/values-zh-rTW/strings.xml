@@ -20,7 +20,6 @@
     <string name="communication_log_format_hex">通訊日誌格式已切換為 HEX</string>
     <string name="hex_toggle_too_fast">HEX 模式切換不能快於 1 秒</string>
     <string name="logs_open">瀏覽日誌目錄</string>
-    <string name="logs_open_latest">開啟最新日誌</string>
     <string name="logs_open_fallback">已開啟下載目錄，請進入 %1$s</string>
     <string name="logs_create_failed">無法建立日誌目錄</string>
     <string name="logs_open_unsupported">目前系統不支援直接開啟日誌目錄</string>
